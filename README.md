@@ -15,7 +15,7 @@ with instant keyboard filtering the moment you start typing.
 
 ## Features
 
-- Fullscreen overlay that matches Omarchy's dark, restrained shell theme
+- Fullscreen overlay that matches Omarchy's theme
 - User-defined sections persisted as desktop-entry IDs
 - Automatic **Uncategorized** section for anything not organized yet
 - **All Apps** view of the complete library, with hidden apps in their own section
