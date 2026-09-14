@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=LaunchBoard
+Comment=Categorized application library for Omarchy
+Exec=omarchy-shell shell toggle bennethon.launchboard
+Icon=launchboard
+Terminal=false
+Categories=Utility;
+StartupNotify=false
+NoDisplay=true
