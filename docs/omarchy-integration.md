@@ -55,9 +55,10 @@ declared) `pluginRegistry` / `barWidgetRegistry` after load.
 
 Stock Hyprland layer rules disable compositor fades for
 `omarchy-menu|omarchy-image-selector|omarchy-emojis|omarchy-clipboard|omarchy-keyboard-panel`.
-LaunchBoard uses namespace `omarchy-launchboard`. A matching user-level
-layer rule ships in `hypr/bindings.lua` and is applied only if the user
-opts into `scripts/install-binding.sh`.
+LaunchBoard uses namespace `bennethon-launchboard` (not the first-party
+`omarchy-*` prefix). A matching user-level layer rule ships in
+`hypr/bindings.lua` and is applied only if the user opts into
+`scripts/install-binding.sh`.
 
 ## How plugins are registered and loaded
 
@@ -140,9 +141,12 @@ Both entry points resolve to the same QML file.
 `shell` facade is present (`hasShell: true`) but `shell.appLibrary` is
 still `null`. `AppSource` therefore uses Quickshell `DesktopEntries` and
 launches with `uwsm-app -- gtk-launch '<id>.desktop'` — the same command
-`AppLibrary.launch()` runs. On this machine that path discovered 80
-visible applications. If a later Omarchy build starts attaching the
-facade to dual-kind plugins, `AppSource` will pick it up automatically.
+`AppLibrary.launch()` runs. The fallback also applies
+`$OMARCHY_PATH/default/omarchy/launcher.hides` and
+`hidden-entries.sh` (`OnlyShowIn` / `NotShowIn` / `Hidden`) so the grid
+matches the stock Apps menu. If a later Omarchy build starts attaching
+the facade to dual-kind plugins, `AppSource` will pick it up
+automatically.
 
 Do **not** parse and execute `.desktop` `Exec=` lines.
 
@@ -232,8 +236,8 @@ From `qs.Commons` (live theme, not a fork):
 |---|---|---|---|
 | Installed apps + metadata | `AppSource` | `shell.appLibrary` | `DesktopEntries` |
 | Icons | `AppSource.iconSource` | `appLibrary.iconSource` | `Quickshell.iconPath` |
-| Launch | `AppSource.launch` | `appLibrary.launch` | `uwsm-app -- gtk-launch` |
-| Hidden stock entries | `AppSource` | AppLibrary filters | `noDisplay` / `hidden` |
+| Launch | `AppSource.launch` | `appLibrary.launch` | `uwsm-app -- gtk-launch` plus a short OSD |
+| Hidden stock entries | `AppSource` | AppLibrary filters | `launcher.hides` + `hidden-entries.sh` + `noDisplay` / `hidden` |
 | User layout | `ConfigStore` | `~/.config/launchboard/config.json` | empty in-memory config |
 
 If Omarchy later publishes a first-class application API for overlay

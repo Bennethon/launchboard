@@ -43,6 +43,17 @@ reload_hypr() {
   fi
 }
 
+strip_launchboard_block() {
+  local file="$1"
+  local tmp
+  tmp="$(mktemp)"
+  if ! awk -f "$PROJECT/scripts/strip-launchboard-block.awk" "$file" > "$tmp"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mv "$tmp" "$file"
+}
+
 remove_bind_hook() {
   local file="$1"
   [[ -f "$file" ]] || return 0
@@ -50,15 +61,13 @@ remove_bind_hook() {
     say "==> No LaunchBoard block in $file"
     return 0
   fi
+  if ! grep -q "END launchboard" "$file"; then
+    fail "unbalanced LaunchBoard markers in $file; refusing to edit"
+  fi
   cp -a "$file" "$file.bak.$(date +%s)"
-  local tmp
-  tmp="$(mktemp)"
-  awk '
-    /BEGIN launchboard/ {skip=1; next}
-    /END launchboard/ {skip=0; next}
-    !skip {print}
-  ' "$file" > "$tmp"
-  mv "$tmp" "$file"
+  if ! strip_launchboard_block "$file"; then
+    fail "failed to strip LaunchBoard block from $file; original left in place"
+  fi
   say "==> Removed LaunchBoard Hyprland shadow from $file"
   reload_hypr
 }
@@ -87,13 +96,13 @@ if ! grep -q -- "$HOOK_BEGIN" "$BINDINGS"; then
   need_bind=1
 elif ! grep -q -- "plugins/${PLUGIN_ID}/" "$BINDINGS"; then
   need_bind=1
-  tmp="$(mktemp)"
-  awk '
-    /BEGIN launchboard/ {skip=1; next}
-    /END launchboard/ {skip=0; next}
-    !skip {print}
-  ' "$BINDINGS" > "$tmp"
-  mv "$tmp" "$BINDINGS"
+  if ! grep -q "END launchboard" "$BINDINGS"; then
+    fail "unbalanced LaunchBoard markers in $BINDINGS; refusing to edit"
+  fi
+  cp -a "$BINDINGS" "$BINDINGS.bak.$(date +%s)"
+  if ! strip_launchboard_block "$BINDINGS"; then
+    fail "failed to strip LaunchBoard block from $BINDINGS; original left in place"
+  fi
 fi
 
 if [[ "$need_bind" -eq 1 ]]; then

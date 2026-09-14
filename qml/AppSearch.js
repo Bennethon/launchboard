@@ -100,3 +100,19 @@ function fuzzyScore(app, query) {
 function matches(app, query) {
   return fuzzyScore(app, query) >= 0
 }
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    entryName: entryName,
+    keywordText: keywordText,
+    categoryText: categoryText,
+    searchText: searchText,
+    wordText: wordText,
+    words: words,
+    acronym: acronym,
+    termMatches: termMatches,
+    allTermsMatch: allTermsMatch,
+    fuzzyScore: fuzzyScore,
+    matches: matches
+  }
+}

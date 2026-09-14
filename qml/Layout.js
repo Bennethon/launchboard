@@ -104,7 +104,8 @@ function hiddenApps(apps, config, query) {
     var id = ids[i]
     if (!id || seen[id]) continue
     seen[id] = true
-    var app = appById(apps, id) || stubApp(id)
+    var app = appById(apps, id)
+    if (!app) continue
     if (!AppSearch.matches(app, query)) continue
     rows.push(decorate(app, query, { hidden: true }))
   }
@@ -219,4 +220,21 @@ function build(apps, config, query, allAppsView, editMode) {
   }
 
   return { sections: sections, flatApps: flat, selectedIndex: bestIndex(flat) }
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    appById: appById,
+    stubApp: stubApp,
+    isHiddenApp: isHiddenApp,
+    decorate: decorate,
+    collectIds: collectIds,
+    uncategorizedApps: uncategorizedApps,
+    sortApps: sortApps,
+    hiddenApps: hiddenApps,
+    allApps: allApps,
+    pushSection: pushSection,
+    bestIndex: bestIndex,
+    build: build
+  }
 }

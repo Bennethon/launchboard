@@ -4,9 +4,7 @@ set -euo pipefail
 
 PROJECT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 PLUGIN_ID="bennethon.launchboard"
-LEGACY_PLUGIN_ID="ben.launchboard"
 PLUGIN_DST="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/${PLUGIN_ID}"
-LEGACY_DST="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/${LEGACY_PLUGIN_ID}"
 CONFIG_DST="${XDG_CONFIG_HOME:-$HOME/.config}/launchboard"
 APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 ICONS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/scalable/apps"
@@ -38,14 +36,6 @@ command -v omarchy >/dev/null 2>&1 || fail "omarchy CLI is not on PATH"
 [[ -f "$PROJECT/qml/Launcher.qml" ]] || fail "qml/Launcher.qml missing"
 
 mkdir -p "$(dirname "$PLUGIN_DST")" "$CONFIG_DST" "$APPS_DIR" "$ICONS_DIR"
-
-if [[ -e "$LEGACY_DST" ]]; then
-  if command -v omarchy >/dev/null 2>&1; then
-    omarchy plugin disable "$LEGACY_PLUGIN_ID" >/dev/null 2>&1 || true
-  fi
-  rm -rf "$LEGACY_DST"
-  say "==> Removed legacy $LEGACY_DST"
-fi
 
 if [[ -e "$PLUGIN_DST" && ! -L "$PLUGIN_DST" && -d "$PLUGIN_DST/.git" ]]; then
   fail "$PLUGIN_DST is a git checkout; refuse to replace it. Remove it first."

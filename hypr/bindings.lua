@@ -16,7 +16,7 @@ o.bind("SUPER + ALT + SPACE", "LaunchBoard", "omarchy-shell shell toggle benneth
 
 -- Keep the overlay instant, matching other Omarchy fullscreen surfaces.
 hl.layer_rule({
-  match = { namespace = "^omarchy-launchboard$" },
+  match = { namespace = "^bennethon-launchboard$" },
   no_anim = true,
   animation = "none"
 })

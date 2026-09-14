@@ -16,19 +16,38 @@ Item {
 
   property var config: Config.emptyConfig()
   property bool ready: false
+  property bool dirReady: false
   property string lastError: ""
+  property string pendingWrite: ""
 
   function applyRaw(raw) {
     var parsed = Config.parse(raw)
+    if (parsed.error && root.ready) {
+      root.lastError = parsed.error
+      return
+    }
     root.lastError = parsed.error || ""
     root.ready = true
     root.config = parsed.config
+    if (parsed.repaired && !parsed.error)
+      root.persist()
+  }
+
+  function flushPending() {
+    if (!root.dirReady || !root.pendingWrite) return
+    var text = root.pendingWrite
+    root.pendingWrite = ""
+    configFile.setText(text)
   }
 
   function persist() {
+    root.pendingWrite = Config.serialize(root.config)
+    if (root.dirReady) {
+      root.flushPending()
+      return
+    }
     if (!ensureDir.running)
       ensureDir.running = true
-    configFile.setText(Config.serialize(root.config))
   }
 
   function replace(next) {
@@ -45,6 +64,13 @@ Item {
   Process {
     id: ensureDir
     command: ["mkdir", "-p", root.configDir]
+    onExited: {
+      root.dirReady = exitCode === 0
+      if (!root.dirReady)
+        root.lastError = "could not create " + root.configDir
+      else
+        root.flushPending()
+    }
   }
 
   FileView {
@@ -56,5 +82,10 @@ Item {
     onLoaded: root.applyRaw(text())
     onLoadFailed: root.applyRaw("")
     onFileChanged: reload()
+  }
+
+  Component.onCompleted: {
+    if (!ensureDir.running)
+      ensureDir.running = true
   }
 }

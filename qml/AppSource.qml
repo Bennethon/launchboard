@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.Commons
 import "Config.js" as Config
 import "AppSearch.js" as AppSearch
@@ -10,14 +11,22 @@ import "AppSearch.js" as AppSearch
 //
 // On Omarchy 4.0.3 the scoped shell facade is injected but appLibrary is
 // still null for this overlay, so the DesktopEntries path is the live one.
+// That path applies launcher.hides and hidden-entries.sh itself so the
+// grid matches the stock Apps menu.
 Item {
   id: root
 
   property var shell: null
+  property string omarchyPath: Quickshell.env("OMARCHY_PATH")
   property var apps: []
   property string backend: "none"
+  property var configuredHiddenEntryIds: ({})
+  property var desktopHiddenEntryIds: ({})
+  property bool configuredHidesReady: false
+  property bool desktopHidesReady: false
 
   readonly property var appLibrary: root.shell && root.shell.appLibrary ? root.shell.appLibrary : null
+  readonly property bool hidesReady: root.configuredHidesReady && root.desktopHidesReady
 
   function normalizeList(value) {
     if (!value) return []
@@ -31,6 +40,22 @@ Item {
     }
     var single = String(value || "").trim()
     return single ? [single] : []
+  }
+
+  function parseHideIds(rawText) {
+    var next = ({})
+    var lines = String(rawText || "").split(/\n/)
+    for (var i = 0; i < lines.length; i++) {
+      var id = Config.normalizeDesktopId(lines[i])
+      if (id.length > 0) next[id] = true
+    }
+    return next
+  }
+
+  function isStockHidden(id) {
+    var key = Config.normalizeDesktopId(id)
+    if (!key) return false
+    return root.configuredHiddenEntryIds[key] === true || root.desktopHiddenEntryIds[key] === true
   }
 
   function fromDesktopEntry(entry) {
@@ -47,6 +72,7 @@ Item {
     var id = Config.normalizeDesktopId(entry.id)
     var name = AppSearch.entryName(entry)
     if (!id || !name) return null
+    if (root.appLibrary === null && root.isStockHidden(id)) return null
 
     return {
       id: id,
@@ -102,15 +128,19 @@ Item {
   }
 
   function reload() {
-    if (root.appLibrary && typeof root.appLibrary.sortedEntries === "function")
+    if (root.appLibrary && typeof root.appLibrary.sortedEntries === "function") {
       root.loadFromLibrary()
-    else
-      root.loadFromDesktopEntries()
+      return
+    }
+    if (!root.hidesReady) return
+    root.loadFromDesktopEntries()
   }
 
   function refresh() {
     if (root.appLibrary && typeof root.appLibrary.refreshIcons === "function")
       root.appLibrary.refreshIcons()
+    if (root.appLibrary === null)
+      root.startHiddenEntryScan()
     root.reload()
   }
 
@@ -139,6 +169,20 @@ Item {
     return Quickshell.iconPath("application-x-executable", true)
   }
 
+  function showLaunchOsd(label) {
+    try {
+      Quickshell.execDetached([
+        "omarchy-shell", "osd", "show",
+        JSON.stringify({
+          icon: "󱓞",
+          message: "Launching " + label + "…",
+          duration: 2000
+        })
+      ])
+    } catch (e) {
+    }
+  }
+
   function launch(id, name) {
     var key = Config.normalizeDesktopId(id)
     if (!key) return
@@ -150,6 +194,70 @@ Item {
     }
 
     Util.execDetached("uwsm-app -- gtk-launch " + Util.shellQuote(key + ".desktop"))
+    root.showLaunchOsd(label)
+  }
+
+  function hiddenEntryScanCommand() {
+    var desktop = [
+      Quickshell.env("XDG_CURRENT_DESKTOP"),
+      Quickshell.env("XDG_SESSION_DESKTOP"),
+      Quickshell.env("DESKTOP_SESSION")
+    ].filter(function(v) { return String(v || "").length > 0 }).join(":")
+    var script = root.omarchyPath + "/shell/services/hidden-entries.sh"
+    return Util.shellQuote(script) + " " + Util.shellQuote(desktop)
+  }
+
+  function startHiddenEntryScan() {
+    if (!root.omarchyPath) {
+      root.desktopHiddenEntryIds = ({})
+      root.desktopHidesReady = true
+      return
+    }
+    if (!hiddenEntryScan.running)
+      hiddenEntryScan.running = true
+  }
+
+  function markConfiguredReady() {
+    if (!root.configuredHidesReady)
+      root.configuredHidesReady = true
+    root.reload()
+  }
+
+  QtObject {
+    id: hiddenEntryOutput
+    property string text: ""
+  }
+
+  FileView {
+    path: root.omarchyPath ? (root.omarchyPath + "/default/omarchy/launcher.hides") : ""
+    watchChanges: true
+    printErrors: false
+    onLoaded: {
+      root.configuredHiddenEntryIds = root.parseHideIds(text())
+      root.markConfiguredReady()
+    }
+    onFileChanged: {
+      root.configuredHiddenEntryIds = root.parseHideIds(text())
+      root.reload()
+    }
+    onLoadFailed: {
+      root.configuredHiddenEntryIds = ({})
+      root.markConfiguredReady()
+    }
+  }
+
+  Process {
+    id: hiddenEntryScan
+    command: ["bash", "-c", root.hiddenEntryScanCommand()]
+    stdout: SplitParser {
+      onRead: function(line) { hiddenEntryOutput.text += line + "\n" }
+    }
+    onStarted: hiddenEntryOutput.text = ""
+    onExited: {
+      root.desktopHiddenEntryIds = root.parseHideIds(hiddenEntryOutput.text)
+      root.desktopHidesReady = true
+      root.reload()
+    }
   }
 
   Connections {
@@ -162,10 +270,31 @@ Item {
     target: DesktopEntries.applications
     enabled: root.appLibrary === null
     ignoreUnknownSignals: true
-    function onValuesChanged() { root.reload() }
+    function onValuesChanged() {
+      root.startHiddenEntryScan()
+      root.reload()
+    }
   }
 
   onAppLibraryChanged: root.reload()
   onShellChanged: Qt.callLater(root.reload)
-  Component.onCompleted: root.reload()
+  onOmarchyPathChanged: {
+    if (!root.omarchyPath) {
+      root.configuredHiddenEntryIds = ({})
+      root.desktopHiddenEntryIds = ({})
+      root.configuredHidesReady = true
+      root.desktopHidesReady = true
+      root.reload()
+      return
+    }
+    root.desktopHidesReady = false
+    root.startHiddenEntryScan()
+  }
+
+  Component.onCompleted: {
+    if (!root.omarchyPath)
+      root.configuredHidesReady = true
+    root.startHiddenEntryScan()
+    root.reload()
+  }
 }

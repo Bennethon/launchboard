@@ -25,19 +25,29 @@ function slugify(value) {
   return slug || "section"
 }
 
+function isReservedSectionId(id) {
+  var key = String(id || "")
+  return key === "hidden" || key === "all" || key === "uncategorized" || key === "menu"
+}
+
 function uniqueSectionId(config, name, preferred) {
-  var base = normalizeDesktopId(preferred) || slugify(name)
-  if (!base) base = "section"
+  var base = normalizeDesktopId(preferred) || ""
+  if (!base || isReservedSectionId(base)) base = slugify(name)
+  if (!base || isReservedSectionId(base)) base = "section"
   var used = {}
   var sections = (config && config.sections) || []
   for (var i = 0; i < sections.length; i++) {
     var id = String((sections[i] && sections[i].id) || "")
     if (id) used[id] = true
   }
-  if (!used[base]) return base
+  if (!used[base] && !isReservedSectionId(base)) return base
   var n = 2
-  while (used[base + "-" + n]) n++
-  return base + "-" + n
+  var candidate = base + "-" + n
+  while (used[candidate] || isReservedSectionId(candidate)) {
+    n++
+    candidate = base + "-" + n
+  }
+  return candidate
 }
 
 function clone(value) {
@@ -53,13 +63,14 @@ function parse(raw) {
   try {
     parsed = JSON.parse(text)
   } catch (e) {
-    return { config: fallback, repaired: true, error: String(e) }
+    return { config: fallback, repaired: false, error: String(e) }
   }
 
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
-    return { config: fallback, repaired: true, error: "config root must be an object" }
+    return { config: fallback, repaired: false, error: "config root must be an object" }
 
   var next = emptyConfig()
+  var repaired = false
   var version = Number(parsed.version)
   next.version = isFinite(version) && version > 0 ? Math.floor(version) : 1
 
@@ -83,8 +94,14 @@ function parse(raw) {
     if (!src || typeof src !== "object") continue
     var name = String(src.name || "").trim()
     var sid = String(src.id || "").trim()
-    if (!sid) sid = uniqueSectionId({ sections: sections }, name || "section")
-    if (sectionIds[sid]) continue
+    if (!sid || isReservedSectionId(sid)) {
+      sid = uniqueSectionId({ sections: sections }, name || "section")
+      repaired = true
+    }
+    if (sectionIds[sid]) {
+      repaired = true
+      continue
+    }
     sectionIds[sid] = true
     var apps = []
     var seen = {}
@@ -102,7 +119,7 @@ function parse(raw) {
     })
   }
   next.sections = sections
-  return { config: next, repaired: false, error: "" }
+  return { config: next, repaired: repaired, error: "" }
 }
 
 function serialize(config) {
@@ -286,4 +303,31 @@ function setHidden(config, appId, hidden) {
   })
   if (hidden && id) next.hiddenApps.push(id)
   return next
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    emptyConfig: emptyConfig,
+    layoutOf: layoutOf,
+    setLayout: setLayout,
+    normalizeDesktopId: normalizeDesktopId,
+    slugify: slugify,
+    isReservedSectionId: isReservedSectionId,
+    uniqueSectionId: uniqueSectionId,
+    clone: clone,
+    parse: parse,
+    serialize: serialize,
+    hiddenIds: hiddenIds,
+    hiddenSet: hiddenSet,
+    assignedSet: assignedSet,
+    sectionIndex: sectionIndex,
+    addSection: addSection,
+    renameSection: renameSection,
+    deleteSection: deleteSection,
+    moveSection: moveSection,
+    moveSectionBefore: moveSectionBefore,
+    removeAppFromSections: removeAppFromSections,
+    moveAppToSection: moveAppToSection,
+    setHidden: setHidden
+  }
 }

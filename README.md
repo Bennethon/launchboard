@@ -1,6 +1,6 @@
 # LaunchBoard
 
-A fullscreen, visual application library for [Omarchy](https://omarchy.org/).
+A fullscreen, visual application launcher for [Omarchy](https://omarchy.org/).
 
 The stock Omarchy launcher is great, and fast when you already know a name. But 
 some of us coming from GUI land sometimes desire more of a visual experience. LaunchBoard 
@@ -28,12 +28,27 @@ with instant keyboard filtering the moment you start typing.
 
 ## Installation
 
+Omarchy plugins run as unsandboxed code inside the long-lived `omarchy-shell`
+process. Review a plugin before you enable it.
+
 ```bash
-omarchy plugin add https://github.com/bennethon/launchboard.git --enable
+omarchy plugin add https://github.com/Bennethon/launchboard.git
 ```
 
-That clones the plugin into `~/.config/omarchy/plugins/bennethon.launchboard`
-and enables it. It does not change your keybindings.
+That clones the repo into `~/.config/omarchy/plugins/bennethon.launchboard`
+and leaves it disabled. Inspect the checkout, then:
+
+```bash
+omarchy plugin enable bennethon.launchboard
+```
+
+If you already trust the repo, `--enable` does both steps:
+
+```bash
+omarchy plugin add https://github.com/Bennethon/launchboard.git --enable
+```
+
+Installation does not change your keybindings.
 
 Open it:
 
@@ -57,6 +72,11 @@ or add Omarchy's supported override to `~/.config/hypr/bindings.lua`:
 ```lua
 hl.unbind("SUPER + ALT + SPACE")
 o.bind("SUPER + ALT + SPACE", "LaunchBoard", "omarchy-shell shell toggle bennethon.launchboard")
+hl.layer_rule({
+  match = { namespace = "^bennethon-launchboard$" },
+  no_anim = true,
+  animation = "none"
+})
 ```
 
 Both are a shadow, not a replacement of Omarchy's packaged bind:
@@ -121,8 +141,10 @@ Application ids are desktop-file ids **without** the `.desktop` suffix,
 matching Omarchy's AppLibrary. Both `org.gimp.GIMP` and
 `org.gimp.GIMP.desktop` are accepted when the file is read.
 
-Prefer Edit mode in the overlay over hand-editing. Missing or malformed JSON
-falls back to an empty layout so the launcher stays usable.
+Prefer Edit mode in the overlay over hand-editing. Missing JSON starts as an
+empty layout. Malformed JSON keeps the last good layout in memory so a
+botched save cannot wipe your sections. Section ids `hidden`, `all`,
+`uncategorized`, and `menu` are reserved.
 
 ## Keyboard
 
@@ -167,6 +189,12 @@ Saving any file under `~/.config/omarchy/plugins/` reloads plugin QML.
 `omarchy restart shell` is needed after changing `keepLoaded` services, but
 ordinary QML edits hot-reload.
 
+Library logic has Node tests (no Quickshell required):
+
+```bash
+node tests/run.js
+```
+
 Inspect failures:
 
 ```bash
@@ -207,10 +235,13 @@ launchboard/
 ├── scripts/
 │   ├── install.sh             # Local symlink install; no keybinding changes
 │   ├── install-binding.sh     # Optional Super+Alt+Space shadow
-│   └── uninstall.sh
+│   ├── uninstall.sh
+│   └── strip-launchboard-block.awk
 ├── hypr/bindings.lua          # Optional Super+Alt+Space snippet
+├── tests/run.js
 ├── docs/screenshot.png
 ├── docs/omarchy-integration.md
+├── CHANGELOG.md
 └── README.md
 ```
 
@@ -219,8 +250,9 @@ launchboard/
 - On Omarchy 4.0.3 the host injects a scoped `shell` facade but not
   `appLibrary`, even when `menu` is declared. LaunchBoard uses Quickshell
   `DesktopEntries` and `uwsm-app -- gtk-launch` instead.
-- The LaunchBoard layer namespace is not in Omarchy's stock no-animation
-  rule. The optional binding helper adds a user-level `layer_rule`.
+- The LaunchBoard layer namespace (`bennethon-launchboard`) is not in
+  Omarchy's stock no-animation rule. The optional binding helper adds a
+  user-level `layer_rule`.
 
 ## License
 

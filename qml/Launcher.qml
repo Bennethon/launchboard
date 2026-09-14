@@ -112,6 +112,13 @@ Item {
     else root.open("{}")
   }
 
+  function countKeys(value) {
+    var n = 0
+    if (!value) return 0
+    for (var key in value) n++
+    return n
+  }
+
   function status(arg) {
     return JSON.stringify({
       opened: root.opened,
@@ -124,7 +131,10 @@ Item {
       allAppsView: root.allAppsView,
       layout: Config.layoutOf(configStore.config),
       hasShell: root.shell !== null && root.shell !== undefined,
-      hasAppLibrary: !!(root.shell && root.shell.appLibrary)
+      hasAppLibrary: !!(root.shell && root.shell.appLibrary),
+      hidesReady: appSource.hidesReady,
+      configuredHides: root.countKeys(appSource.configuredHiddenEntryIds),
+      desktopHides: root.countKeys(appSource.desktopHiddenEntryIds)
     })
   }
 
@@ -195,8 +205,7 @@ Item {
       { id: "open", label: "Open" },
       { id: "info", label: "App info" }
     ]
-    if (root.editMode || true)
-      items.push({ id: "move", label: "Move to section…" })
+    items.push({ id: "move", label: "Move to section…" })
     items.push({
       id: app.hidden ? "unhide" : "hide",
       label: app.hidden ? "Show in launcher" : "Hide from launcher"
@@ -648,6 +657,7 @@ Item {
   AppSource {
     id: appSource
     shell: root.shell
+    omarchyPath: root.omarchyPath
   }
   SearchController { id: search }
 
@@ -666,7 +676,7 @@ Item {
     visible: root.opened
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
-    WlrLayershell.namespace: "omarchy-launchboard"
+    WlrLayershell.namespace: "bennethon-launchboard"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
     exclusionMode: ExclusionMode.Ignore

@@ -4,9 +4,7 @@ set -euo pipefail
 
 PROJECT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 PLUGIN_ID="bennethon.launchboard"
-LEGACY_PLUGIN_ID="ben.launchboard"
 PLUGIN_DST="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/${PLUGIN_ID}"
-LEGACY_DST="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/${LEGACY_PLUGIN_ID}"
 CONFIG_DST="${XDG_CONFIG_HOME:-$HOME/.config}/launchboard"
 BINDINGS="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/bindings.lua"
 APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
@@ -32,21 +30,32 @@ EOF
 
 say() { printf '%s\n' "$*"; }
 
+strip_launchboard_block() {
+  local file="$1"
+  local tmp
+  tmp="$(mktemp)"
+  if ! awk -f "$PROJECT/scripts/strip-launchboard-block.awk" "$file" > "$tmp"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mv "$tmp" "$file"
+}
+
 remove_bind_hook() {
   local file="$1"
   [[ -f "$file" ]] || return 0
   if ! grep -q "BEGIN launchboard" "$file"; then
     return 0
   fi
+  if ! grep -q "END launchboard" "$file"; then
+    printf 'uninstall.sh: unbalanced LaunchBoard markers in %s; refusing to edit\n' "$file" >&2
+    return 1
+  fi
   cp -a "$file" "$file.bak.$(date +%s)"
-  local tmp
-  tmp="$(mktemp)"
-  awk '
-    /BEGIN launchboard/ {skip=1; next}
-    /END launchboard/ {skip=0; next}
-    !skip {print}
-  ' "$file" > "$tmp"
-  mv "$tmp" "$file"
+  if ! strip_launchboard_block "$file"; then
+    printf 'uninstall.sh: failed to strip LaunchBoard block from %s; original left in place\n' "$file" >&2
+    return 1
+  fi
   say "==> Removed LaunchBoard Hyprland shadow from $file"
   if command -v hyprctl >/dev/null 2>&1; then
     hyprctl reload >/dev/null 2>&1 || true
@@ -69,15 +78,12 @@ done
 
 if command -v omarchy >/dev/null 2>&1; then
   omarchy plugin disable "$PLUGIN_ID" >/dev/null 2>&1 || true
-  omarchy plugin disable "$LEGACY_PLUGIN_ID" >/dev/null 2>&1 || true
 fi
 
-for dst in "$PLUGIN_DST" "$LEGACY_DST"; do
-  if [[ -L "$dst" || -d "$dst" ]]; then
-    rm -rf "$dst"
-    say "==> Removed $dst"
-  fi
-done
+if [[ -L "$PLUGIN_DST" || -d "$PLUGIN_DST" ]]; then
+  rm -rf "$PLUGIN_DST"
+  say "==> Removed $PLUGIN_DST"
+fi
 
 rm -f "$APPS_DIR/launchboard.desktop" "$ICONS_DIR/launchboard.svg"
 command -v update-desktop-database >/dev/null 2>&1 &&
