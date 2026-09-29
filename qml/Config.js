@@ -1,16 +1,16 @@
 .pragma library
 
 function emptyConfig() {
-  return { version: 1, layout: "stack", sections: [], hiddenApps: [] }
+  return { version: 1, layout: "tile", sections: [], hiddenApps: [] }
 }
 
 function layoutOf(config) {
-  return config && config.layout === "tile" ? "tile" : "stack"
+  return config && config.layout === "stack" ? "stack" : "tile"
 }
 
 function setLayout(config, layout) {
   var next = clone(config || emptyConfig())
-  next.layout = layout === "tile" ? "tile" : "stack"
+  next.layout = layoutOf({ layout: layout })
   return next
 }
 
@@ -84,7 +84,7 @@ function parse(raw) {
     hidden.push(hid)
   }
   next.hiddenApps = hidden
-  next.layout = parsed.layout === "tile" ? "tile" : "stack"
+  next.layout = layoutOf(parsed)
 
   var sections = []
   var sectionIds = {}

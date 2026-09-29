@@ -48,7 +48,7 @@ say "==> Symlinked $PLUGIN_DST -> $PROJECT"
 if [[ ! -f "$CONFIG_DST/config.json" ]]; then
   printf '%s\n' '{
   "version": 1,
-  "layout": "stack",
+  "layout": "tile",
   "sections": [],
   "hiddenApps": []
 }' > "$CONFIG_DST/config.json"

@@ -833,6 +833,8 @@ Item {
 
           Column {
             id: boardColumn
+            // Center short boards while keeping overflowing sections scrollable from the top.
+            y: Math.max(0, (scroller.height - height) / 2)
             width: scroller.width
             spacing: root.sectionGap
 

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "bennethon.launchboard",
   "name": "LaunchBoard",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "Ben Brown",
   "license": "MIT",
   "description": "Fullscreen categorized application library for Omarchy. Browse when you don't know what you're looking for. Type when you do.",

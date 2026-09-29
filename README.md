@@ -119,7 +119,7 @@ Schema version 1:
 ```json
 {
   "version": 1,
-  "layout": "stack",
+  "layout": "tile",
   "sections": [
     {
       "id": "creative",
@@ -134,8 +134,8 @@ Schema version 1:
 }
 ```
 
-`layout` is `"stack"` (full-width rows, the default) or `"tile"` (section
-cards in two or three columns). Change it from Edit mode; it persists.
+`layout` is `"tile"` (section cards in two or three columns, the default)
+or `"stack"` (full-width rows). Change it from Edit mode; it persists.
 
 Application ids are desktop-file ids **without** the `.desktop` suffix,
 matching Omarchy's AppLibrary. Both `org.gimp.GIMP` and

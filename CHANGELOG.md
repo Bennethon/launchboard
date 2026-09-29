@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 — 2026-09-29
+
+- Center sections vertically below the header when they fit in the viewport;
+  keep taller boards top-aligned and scrollable.
+- Default to Tile for new installs and missing or invalid layout settings,
+  while preserving explicitly saved Stack preferences.
+
 ## 0.1.1 — 2026-09-13
 
 - Match the stock Apps menu hide list on the DesktopEntries fallback
